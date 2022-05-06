@@ -1,6 +1,7 @@
 package httpc
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -51,6 +52,57 @@ func TestGetWithDefaultHeaders(t *testing.T) {
 	hc := Get(url)
 	if got := hc.headers; !reflect.DeepEqual(got, defaultHeaders) {
 		t.Errorf("Get() headers got %v, want %v", got, defaultHeaders)
+	}
+}
+
+func TestPost(t *testing.T) {
+	t.Parallel()
+	url := "https://api.com/api/v1/example/"
+	type requestBody struct {
+		Text  string
+		Token string
+	}
+	body := &requestBody{
+		Text:  "this is some text",
+		Token: "mySecretToken",
+	}
+	hc := Post(url, body)
+	if got := hc.Method; !reflect.DeepEqual(got, http.MethodPost) {
+		t.Errorf("Post() Method got %v, want %v", got, http.MethodPost)
+	}
+	if got := hc.Url; !reflect.DeepEqual(got, url) {
+		t.Errorf("Post() url got %v, want %v", got, url)
+	}
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(hc.body)
+	got := buf.String()
+	want := "{\"Text\":\"this is some text\",\"Token\":\"mySecretToken\"}"
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Post() request body got %v, want %v", got, want)
+	}
+}
+
+func TestPostErrorSet(t *testing.T) {
+	t.Parallel()
+	badUrl := "api.com/api/v1/example/"
+	type requestBody struct {
+		Text  string
+		Token string
+	}
+	body := &requestBody{
+		Text:  "this is some text",
+		Token: "mySecretToken",
+	}
+
+	hc := Post(badUrl, body)
+	if hc.Error == nil {
+		t.Error("want error set on hc.Error")
+	}
+	if hc.Method != "" {
+		t.Error("want error set on hc.Error")
+	}
+	if hc.body != nil {
+		t.Error("want error set on hc.Error")
 	}
 }
 

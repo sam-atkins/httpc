@@ -1,6 +1,7 @@
 package httpc
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,7 +12,7 @@ type HttpClient struct {
 	basicAuthRequired bool
 	basicAuthUsername string
 	basicAuthPassword string
-	Body              io.Reader
+	body              io.Reader
 	Client            *http.Client
 	Error             error
 	headers           map[string]string
@@ -21,7 +22,7 @@ type HttpClient struct {
 
 func NewClient(url string) *HttpClient {
 	return &HttpClient{
-		Body:   nil,
+		body:   nil,
 		Client: &http.Client{},
 		headers: map[string]string{
 			"Content-Type": "application/json;charset=UTF-8",
@@ -43,6 +44,25 @@ func Get(url string) *HttpClient {
 	return h
 }
 
+// Post prepares a Post request. It sets the http method to Post and validates the provided
+// url. It sets the arg requestBody as the post request body.
+func Post(url string, requestBody interface{}) *HttpClient {
+	h := NewClient(url)
+	validUrl, err := h.validURL()
+	if !validUrl {
+		h.Error = err
+		return h
+	}
+	h.Method = http.MethodPost
+	body, err := json.Marshal(&requestBody)
+	if err != nil {
+		h.Error = err
+		return h
+	}
+	h.body = bytes.NewBuffer(body)
+	return h
+}
+
 // AddHeaders adds headers to the request.
 //
 // Defaults already set are:
@@ -57,7 +77,7 @@ func (h *HttpClient) AddHeaders(headers map[string]string) *HttpClient {
 	return h
 }
 
-// BasicAuth sets basic auth to the request.
+// BasicAuth sets basic auth on the request.
 func (h *HttpClient) BasicAuth(username, password string) *HttpClient {
 	if h.Error != nil {
 		return h
@@ -76,7 +96,7 @@ func (h *HttpClient) Do() (*http.Response, error) {
 		return nil, reqErr
 	}
 
-	req, err := http.NewRequest(h.Method, h.Url, h.Body)
+	req, err := http.NewRequest(h.Method, h.Url, h.body)
 	if err != nil {
 		return nil, err
 	}
