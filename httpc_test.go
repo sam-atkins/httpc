@@ -88,6 +88,40 @@ func TestAddHeadersErrorSet(t *testing.T) {
 	}
 }
 
+func TestBasicAuth(t *testing.T) {
+	t.Parallel()
+	url := "https://api.com/api/v1/example/"
+	username := "user"
+	password := "myPassword"
+	hc := Get(url).BasicAuth(username, password)
+	if got := hc.basicAuthRequired; got != true {
+		t.Errorf("BasicAuth() got %v, want true", got)
+	}
+	if got := hc.basicAuthUsername; got != username {
+		t.Errorf("BasicAuth() got %v, want %v", got, username)
+	}
+	if got := hc.basicAuthPassword; got != password {
+		t.Errorf("BasicAuth() got %v, want %v", got, password)
+	}
+}
+
+func TestBasicAuthErr(t *testing.T) {
+	t.Parallel()
+	badUrl := "api.com/api/v1/example/"
+	username := "user"
+	password := "myPassword"
+	hc := Get(badUrl).BasicAuth(username, password)
+	if got := hc.basicAuthRequired; got != false {
+		t.Errorf("BasicAuth() got %v, want false", got)
+	}
+	if got := hc.basicAuthUsername; got != "" {
+		t.Errorf("BasicAuth() got %v, want %v", got, "")
+	}
+	if got := hc.basicAuthPassword; got != "" {
+		t.Errorf("BasicAuth() got %v, want %v", got, "")
+	}
+}
+
 func TestDo_StatusOK(t *testing.T) {
 	t.Parallel()
 	tc, mux, teardown := testClient(t)
@@ -97,8 +131,9 @@ func TestDo_StatusOK(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, string(loadTestJson("testdata/simple.json")))
 	})
-
-	got, err := Get(tc.Url + endpoint).Do()
+	username := "user"
+	password := "myPassword"
+	got, err := Get(tc.Url+endpoint).BasicAuth(username, password).Do()
 	if err != nil {
 		t.Errorf("Do() error = %v, wantErr nil", err)
 	}

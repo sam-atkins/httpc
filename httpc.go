@@ -8,12 +8,15 @@ import (
 )
 
 type HttpClient struct {
-	Body    io.Reader
-	Client  *http.Client
-	Error   error
-	headers map[string]string
-	Method  string
-	Url     string
+	basicAuthRequired bool
+	basicAuthUsername string
+	basicAuthPassword string
+	Body              io.Reader
+	Client            *http.Client
+	Error             error
+	headers           map[string]string
+	Method            string
+	Url               string
 }
 
 func NewClient(url string) *HttpClient {
@@ -54,6 +57,17 @@ func (h *HttpClient) AddHeaders(headers map[string]string) *HttpClient {
 	return h
 }
 
+// BasicAuth sets basic auth to the request.
+func (h *HttpClient) BasicAuth(username, password string) *HttpClient {
+	if h.Error != nil {
+		return h
+	}
+	h.basicAuthRequired = true
+	h.basicAuthUsername = username
+	h.basicAuthPassword = password
+	return h
+}
+
 // Do validates the request and if ok, does the HTTP request. It returns the HTTP response
 // or an error
 func (h *HttpClient) Do() (*http.Response, error) {
@@ -69,6 +83,10 @@ func (h *HttpClient) Do() (*http.Response, error) {
 
 	for key, value := range h.headers {
 		req.Header.Add(key, value)
+	}
+
+	if h.basicAuthRequired {
+		req.SetBasicAuth(h.basicAuthUsername, h.basicAuthPassword)
 	}
 
 	res, resErr := h.Client.Do(req)
