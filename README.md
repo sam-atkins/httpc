@@ -28,7 +28,7 @@ type simpleJSON struct {
 }
 var sj simpleJSON
 
-err := Get("https://api.com/api/v1/example/").Load(&sj)
+err := httpc.Get("https://api.com/api/v1/example/").Load(&sj)
 ```
 
 ### Example POST requests
@@ -43,7 +43,7 @@ body := &requestBody{
     Text:  "this is some text",
     Token: "mySecretToken",
 }
-res, err := Post(url, body).Do()
+res, err := httpc.Post(url, body).Do()
 ```
 
 ```go
@@ -65,5 +65,5 @@ var sj simpleJSON
 
 headers := map[string]string{"X-Auth-Token": "topSecretToken"}
 
-err := Post(url, body).AddHeaders(headers).Load(&sj)
+err := httpc.Post(url, body).AddHeaders(headers).Load(&sj)
 ```
