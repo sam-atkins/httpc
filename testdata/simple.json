@@ -1,5 +1,5 @@
 {
-    "hello": "world",
+    "status": "OK",
     "data": [
         {
             "exampleKey": "exampleValue"

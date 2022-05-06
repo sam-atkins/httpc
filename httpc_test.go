@@ -143,3 +143,50 @@ func TestDo_InvalidRequestNoMethod(t *testing.T) {
 		t.Error("Do() want error when invalid request")
 	}
 }
+
+func TestLoad_StatusOK(t *testing.T) {
+	t.Parallel()
+	tc, mux, teardown := testClient(t)
+	defer teardown()
+	endpoint := "/api/v1/example/"
+	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, string(loadTestJson("testdata/simple.json")))
+	})
+
+	type simpleJSON struct {
+		Data []struct {
+			ExampleKey string `json:"exampleKey"`
+		} `json:"data"`
+		Status string `json:"status"`
+	}
+	var sj simpleJSON
+
+	err := Get(tc.Url + endpoint).Load(&sj)
+	if err != nil {
+		t.Errorf("Do() error = %v, wantErr nil", err)
+	}
+	if sj.Status != "OK" {
+		t.Errorf("Load() want \"OK\", got %v", sj.Status)
+	}
+	if len(sj.Data) != 1 {
+		t.Errorf("Load() want Data struct len 1, got %v", len(sj.Data))
+	}
+}
+
+func TestLoad_Err(t *testing.T) {
+	t.Parallel()
+	type simpleJSON struct {
+		Data []struct {
+			ExampleKey string `json:"exampleKey"`
+		} `json:"data"`
+		Status string `json:"status"`
+	}
+	var sj simpleJSON
+	badUrl := "api/v1/example"
+
+	err := Get(badUrl).Load(&sj)
+	if err == nil {
+		t.Error("Do() want error when invalid request")
+	}
+}

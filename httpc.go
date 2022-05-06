@@ -1,6 +1,7 @@
 package httpc
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -88,4 +89,19 @@ func (h *HttpClient) Do() (*http.Response, error) {
 	}
 	// 2xx
 	return res, nil
+}
+
+// Load makes the HTTP request and unmarshals the response into the provided data arg.
+// This method calls Do() so there is no need to call Do then Load.
+func (h *HttpClient) Load(data interface{}) error {
+	res, err := h.Do()
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	decodeErr := json.NewDecoder(res.Body).Decode(&data)
+	if decodeErr != nil {
+		return decodeErr
+	}
+	return nil
 }
