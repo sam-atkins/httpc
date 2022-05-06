@@ -1,11 +1,35 @@
 package httpc
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 )
 
+// Test Fixtures
+func testClient(t *testing.T) (*HttpClient, *http.ServeMux, func()) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	client := NewClient(server.URL)
+
+	return client, mux, func() {
+		server.Close()
+	}
+}
+
+func loadTestJson(path string) []byte {
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatal("Error when opening file: ", err)
+	}
+	return content
+}
+
+// Tests
 func TestGet(t *testing.T) {
 	t.Parallel()
 	url := "https://api.com/api/v1/example/"
@@ -61,5 +85,61 @@ func TestAddHeadersErrorSet(t *testing.T) {
 	}
 	if got := hc.headers; !reflect.DeepEqual(got, wantHeaders) {
 		t.Errorf("AddHeaders() got %v, want %v", got, wantHeaders)
+	}
+}
+
+func TestDo_StatusOK(t *testing.T) {
+	t.Parallel()
+	tc, mux, teardown := testClient(t)
+	defer teardown()
+	endpoint := "/api/v1/example/"
+	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, string(loadTestJson("testdata/simple.json")))
+	})
+
+	got, err := Get(tc.Url + endpoint).Do()
+	if err != nil {
+		t.Errorf("Do() error = %v, wantErr nil", err)
+	}
+	if got.StatusCode != http.StatusOK {
+		t.Errorf("Do() HTTP Status Code = %v, wantErr %v", got.StatusCode, http.StatusOK)
+	}
+	if got.Body == nil {
+		t.Error("Do() want Response.Body, got  nil")
+	}
+}
+
+func TestDo_StatusNotOK(t *testing.T) {
+	t.Parallel()
+	tc, mux, teardown := testClient(t)
+	defer teardown()
+	endpoint := "/api/v1/example/"
+	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, string(loadTestJson("testdata/404.json")))
+	})
+
+	_, err := Get(tc.Url + endpoint).Do()
+	if err == nil {
+		t.Error("Do() want error when not 2xx response")
+	}
+}
+
+func TestDo_InvalidRequestBadURL(t *testing.T) {
+	badUrl := "api/v1/example"
+	_, err := Get(badUrl).Do()
+	if err == nil {
+		t.Error("Do() want error when invalid request")
+	}
+}
+
+func TestDo_InvalidRequestNoMethod(t *testing.T) {
+	url := "https://api.com/api/v1/example/"
+	hc := Get(url)
+	hc.Method = ""
+	_, err := hc.Do()
+	if err == nil {
+		t.Error("Do() want error when invalid request")
 	}
 }

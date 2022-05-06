@@ -30,7 +30,11 @@ func NewClient(url string) *HttpClient {
 // url
 func Get(url string) *HttpClient {
 	h := NewClient(url)
-	h.validURL()
+	validUrl, err := h.validURL()
+	if !validUrl {
+		h.Error = err
+		return h
+	}
 	h.Method = http.MethodGet
 	return h
 }

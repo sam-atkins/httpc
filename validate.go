@@ -16,11 +16,10 @@ func (h *HttpClient) validRequest() (bool, error) {
 	return true, nil
 }
 
-func (h *HttpClient) validURL() bool {
+func (h *HttpClient) validURL() (bool, error) {
 	_, err := url.ParseRequestURI(h.Url)
 	if err != nil {
-		h.Error = err
-		return false
+		return false, err
 	}
-	return true
+	return true, nil
 }

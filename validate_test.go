@@ -30,12 +30,9 @@ func TestHttpClient_validURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hc := Get(tt.args.endpoint)
-			got := hc.validURL()
+			got, _ := hc.validURL()
 			if got != tt.want {
 				t.Errorf("HttpClient.validURL() = %v, want %v", got, tt.want)
-			}
-			if tt.wantErr && hc.Error == nil {
-				t.Error("want URL error set on hc.Error")
 			}
 		})
 	}
