@@ -1,3 +1,5 @@
+[![CI](https://github.com/sam-atkins/httpc/actions/workflows/ci.yml/badge.svg)](https://github.com/sam-atkins/httpc/actions/workflows/ci.yml)
+
 # httpc
 
 A Go HTTP Client.
