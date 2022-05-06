@@ -26,5 +26,5 @@ type simpleJSON struct {
 }
 var sj simpleJSON
 
-err := Get(tc.Url + endpoint).Load(&sj)
+err := Get("https://api.com/api/v1/example/").Load(&sj)
 ```
