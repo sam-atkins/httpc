@@ -43,13 +43,13 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestGetWithDefaultHeaders(t *testing.T) {
+func TestGetJsonWithDefaultHeaders(t *testing.T) {
 	t.Parallel()
 	url := "https://api.com/api/v1/example/"
 	defaultHeaders := map[string]string{
 		"Content-Type": "application/json;charset=UTF-8",
 	}
-	hc := Get(url)
+	hc := GetJson(url)
 	if got := hc.headers; !reflect.DeepEqual(got, defaultHeaders) {
 		t.Errorf("Get() headers got %v, want %v", got, defaultHeaders)
 	}
@@ -112,13 +112,9 @@ func TestAddHeaders(t *testing.T) {
 	headers := map[string]string{
 		"X-Auth-Token": "mySecretToken",
 	}
-	wantHeaders := map[string]string{
-		"Content-Type": "application/json;charset=UTF-8",
-		"X-Auth-Token": "mySecretToken",
-	}
 	hc := Get(url).AddHeaders(headers)
-	if got := hc.headers; !reflect.DeepEqual(got, wantHeaders) {
-		t.Errorf("Get() headers got %v, want %v", got, wantHeaders)
+	if got := hc.headers; !reflect.DeepEqual(got, headers) {
+		t.Errorf("Get() headers got %v, want %v", got, headers)
 	}
 }
 
@@ -128,9 +124,7 @@ func TestAddHeadersErrorSet(t *testing.T) {
 	headers := map[string]string{
 		"X-Auth-Token": "mySecretToken",
 	}
-	wantHeaders := map[string]string{
-		"Content-Type": "application/json;charset=UTF-8",
-	}
+	wantHeaders := map[string]string{}
 	hc := Get(badUrl).AddHeaders(headers)
 	if hc.Error == nil {
 		t.Error("want URL error set on hc.Error")
@@ -177,7 +171,7 @@ func TestBasicAuthErr(t *testing.T) {
 func TestDo_StatusOK(t *testing.T) {
 	t.Parallel()
 	tc, mux, teardown := testClient(t)
-	defer teardown()
+	t.Cleanup(teardown)
 	endpoint := "/api/v1/example/"
 	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -200,7 +194,7 @@ func TestDo_StatusOK(t *testing.T) {
 func TestDo_StatusNotOK(t *testing.T) {
 	t.Parallel()
 	tc, mux, teardown := testClient(t)
-	defer teardown()
+	t.Cleanup(teardown)
 	endpoint := "/api/v1/example/"
 	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -234,7 +228,7 @@ func TestDo_InvalidRequestNoMethod(t *testing.T) {
 func TestLoad_StatusOK(t *testing.T) {
 	t.Parallel()
 	tc, mux, teardown := testClient(t)
-	defer teardown()
+	t.Cleanup(teardown)
 	endpoint := "/api/v1/example/"
 	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

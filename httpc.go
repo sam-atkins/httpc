@@ -22,12 +22,10 @@ type HttpClient struct {
 
 func NewClient(url string) *HttpClient {
 	return &HttpClient{
-		body:   nil,
-		Client: &http.Client{},
-		headers: map[string]string{
-			"Content-Type": "application/json;charset=UTF-8",
-		},
-		Url: url,
+		body:    nil,
+		Client:  &http.Client{},
+		headers: map[string]string{},
+		Url:     url,
 	}
 }
 
@@ -44,8 +42,18 @@ func Get(url string) *HttpClient {
 	return h
 }
 
-// Post prepares a Post request. It sets the http method to Post and validates the provided
-// url. It sets the arg requestBody as the post request body.
+// GetJson is a wrapper on the Get method. It sets the Content Type header to JSON.
+func GetJson(url string) *HttpClient {
+	h := Get(url)
+	h.headers = map[string]string{
+		"Content-Type": "application/json;charset=UTF-8",
+	}
+	return h
+}
+
+// Post prepares a Post JSON request. It sets the http method to Post, validates the provided
+// url and sets the content type to JSON. It sets the arg requestBody as the post request
+// body.
 func Post(url string, requestBody interface{}) *HttpClient {
 	h := NewClient(url)
 	validUrl, err := h.validURL()
@@ -54,6 +62,9 @@ func Post(url string, requestBody interface{}) *HttpClient {
 		return h
 	}
 	h.Method = http.MethodPost
+	h.headers = map[string]string{
+		"Content-Type": "application/json;charset=UTF-8",
+	}
 	body, err := json.Marshal(&requestBody)
 	if err != nil {
 		h.Error = err
@@ -64,9 +75,6 @@ func Post(url string, requestBody interface{}) *HttpClient {
 }
 
 // AddHeaders adds headers to the request.
-//
-// Defaults already set are:
-//   Content-Type: application/json;charset=UTF-8
 func (h *HttpClient) AddHeaders(headers map[string]string) *HttpClient {
 	if h.Error != nil {
 		return h
