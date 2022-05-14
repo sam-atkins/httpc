@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"strings"
 )
 
 type HttpClient struct {
@@ -42,7 +45,7 @@ func Get(url string) *HttpClient {
 	return h
 }
 
-// GetJson is a wrapper on the Get method. It sets the Content Type header to JSON.
+// GetJson is a convenience wrapper on the Get method. It sets the Content Type header to JSON.
 func GetJson(url string) *HttpClient {
 	h := Get(url)
 	h.headers = map[string]string{
@@ -71,6 +74,62 @@ func Post(url string, requestBody interface{}) *HttpClient {
 		return h
 	}
 	h.body = bytes.NewBuffer(body)
+	return h
+}
+
+type FormField struct {
+	Name  string
+	Value string
+}
+
+type FormFile struct {
+	FileName string
+	File     *os.File
+}
+
+// PostForm prepares a POST form request.
+func PostForm(url string, formFile FormFile, formFields ...FormField) *HttpClient {
+	h := NewClient(url)
+	validUrl, err := h.validURL()
+	if !validUrl {
+		h.Error = err
+		return h
+	}
+
+	h.Method = http.MethodPost
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for _, field := range formFields {
+		var formField io.Writer
+		formField, errForm := writer.CreateFormField(field.Name)
+		if errForm != nil {
+			h.Error = errForm
+			return h
+		}
+		_, errCopy := io.Copy(formField, strings.NewReader(field.Value))
+		if errCopy != nil {
+			h.Error = errCopy
+			return h
+		}
+	}
+
+	fileField, err := writer.CreateFormFile("file", formFile.FileName)
+	if err != nil {
+		h.Error = err
+		return h
+	}
+	_, err = io.Copy(fileField, formFile.File)
+	if err != nil {
+		h.Error = err
+		return h
+	}
+
+	writer.Close()
+	h.body = bytes.NewReader(body.Bytes())
+	h.headers = map[string]string{
+		"Content-Type": writer.FormDataContentType(),
+	}
 	return h
 }
 

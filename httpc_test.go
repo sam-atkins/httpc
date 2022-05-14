@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -72,6 +74,13 @@ func TestPost(t *testing.T) {
 	}
 	if got := hc.Url; !reflect.DeepEqual(got, url) {
 		t.Errorf("Post() url got %v, want %v", got, url)
+	}
+	if got := hc.headers; !reflect.DeepEqual(got, map[string]string{
+		"Content-Type": "application/json;charset=UTF-8",
+	}) {
+		t.Errorf("Post() url got %v, want %v", got, map[string]string{
+			"Content-Type": "application/json;charset=UTF-8",
+		})
 	}
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(hc.body)
@@ -188,6 +197,67 @@ func TestDo_StatusOK(t *testing.T) {
 	}
 	if got.Body == nil {
 		t.Error("Do() want Response.Body, got  nil")
+	}
+}
+
+func TestPostForm_Do_StatusOK(t *testing.T) {
+	t.Parallel()
+	tc, mux, teardown := testClient(t)
+	t.Cleanup(teardown)
+	endpoint := "/api/v1/example/"
+	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, string(loadTestJson("testdata/simple.json")))
+	})
+	projectId := "123456"
+	templateFile, _ := os.Open("testdata/template.csv")
+	formFile := FormFile{FileName: "example", File: templateFile}
+	formFieldProjId := FormField{Name: "project_id", Value: projectId}
+	formFieldToken := FormField{Name: "token", Value: "mySecretToken"}
+
+	hc := PostForm(tc.Url+endpoint, formFile, formFieldProjId, formFieldToken)
+
+	if got := hc.Url; !reflect.DeepEqual(got, hc.Url) {
+		t.Errorf("PostForm() url got %v, want %v", got, hc.Url)
+	}
+	if got := hc.Method; !reflect.DeepEqual(got, http.MethodPost) {
+		t.Errorf("PostForm() Method got %v, want %v", got, http.MethodPost)
+	}
+	if hc.body == nil {
+		t.Errorf("PostForm() body got nil %v, want %v", nil, hc.body)
+	}
+
+	got, err := hc.Do()
+	if err != nil {
+		t.Errorf("PostForm().Do() error = %v, wantErr nil", err)
+	}
+	if err != nil {
+		t.Errorf("Do() error = %v, wantErr nil", err)
+	}
+	if got.StatusCode != http.StatusOK {
+		t.Errorf("Do() HTTP Status Code = %v, wantErr %v", got.StatusCode, http.StatusOK)
+	}
+	if got.Body == nil {
+		t.Error("Do() want Response.Body, got  nil")
+	}
+	gotHeaders := hc.headers
+	for _, v := range gotHeaders {
+		if !strings.Contains(v, "multipart/form-data;") {
+			t.Errorf("PostForm() headers got %v, want that headers contain %v", gotHeaders, "multipart/form-data;")
+		}
+	}
+}
+
+func TestPostForm_Do_InvalidRequestBadURL(t *testing.T) {
+	projectId := "123456"
+	templateFile, _ := os.Open("testdata/template.csv")
+	formFile := FormFile{FileName: "example", File: templateFile}
+	formFieldProjId := FormField{Name: "project_id", Value: projectId}
+	formFieldToken := FormField{Name: "token", Value: "mySecretToken"}
+	badUrl := "api/v1/example"
+	_, err := PostForm(badUrl, formFile, formFieldProjId, formFieldToken).Do()
+	if err == nil {
+		t.Error("Do() want error when invalid request")
 	}
 }
 
