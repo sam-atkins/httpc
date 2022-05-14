@@ -45,7 +45,8 @@ func Get(url string) *HttpClient {
 	return h
 }
 
-// GetJson is a convenience wrapper on the Get method. It sets the Content Type header to JSON.
+// GetJson is a convenience wrapper on the Get method that sets the Content Type header to
+// JSON.
 func GetJson(url string) *HttpClient {
 	h := Get(url)
 	h.headers = map[string]string{
