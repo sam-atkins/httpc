@@ -28,7 +28,7 @@ type simpleJSON struct {
 }
 var sj simpleJSON
 
-err := httpc.Get("https://api.com/api/v1/example/").Load(&sj)
+err := httpc.GetJson("https://api.com/api/v1/example/").Load(&sj)
 ```
 
 ### Example POST requests
