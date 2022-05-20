@@ -166,6 +166,9 @@ func TestBasicAuthErr(t *testing.T) {
 	username := "user"
 	password := "myPassword"
 	hc := Get(badUrl).BasicAuth(username, password)
+	if hc.Error == nil {
+		t.Error("BasicAuth() want error, got nil")
+	}
 	if got := hc.basicAuthRequired; got != false {
 		t.Errorf("BasicAuth() got %v, want false", got)
 	}
@@ -177,7 +180,60 @@ func TestBasicAuthErr(t *testing.T) {
 	}
 }
 
-func TestDo_StatusOK(t *testing.T) {
+func TestBasicAuth_BadArgs(t *testing.T) {
+	t.Parallel()
+	url := "https://api.com/api/v1/example/"
+	username := ""
+	password := ""
+	hc := Get(url).BasicAuth(username, password)
+	if got := hc.basicAuthRequired; got != false {
+		t.Errorf("BasicAuth() got %v, want false", got)
+	}
+	if got := hc.basicAuthUsername; got != "" {
+		t.Errorf("BasicAuth() got %v, want %v", got, "")
+	}
+	if got := hc.basicAuthPassword; got != "" {
+		t.Errorf("BasicAuth() got %v, want %v", got, "")
+	}
+}
+
+func TestBearerAuth(t *testing.T) {
+	t.Parallel()
+	url := "https://api.com/api/v1/example/"
+	token := "someToken"
+	hc := Get(url).BearerAuth(token)
+	if got := hc.bearerAuthRequired; got != true {
+		t.Errorf("BearerAuth() got %v, want true", got)
+	}
+	if got := hc.bearerAuthToken; got != token {
+		t.Errorf("BearerAuth() got %v, want %v", got, token)
+	}
+}
+
+func TestBearerAuth_BadArg(t *testing.T) {
+	t.Parallel()
+	badUrl := "api.com/api/v1/example/"
+	token := "someToken"
+	hc := Get(badUrl).BearerAuth(token)
+	if got := hc.bearerAuthRequired; got != false {
+		t.Errorf("BearerAuth() got %v, want false", got)
+	}
+}
+
+func TestBearerAuth_BadUrl(t *testing.T) {
+	t.Parallel()
+	url := "https://api.com/api/v1/example/"
+	token := ""
+	hc := Get(url).BearerAuth(token)
+	if got := hc.bearerAuthRequired; got != false {
+		t.Errorf("BearerAuth() got %v, want false", got)
+	}
+	if hc.Error == nil {
+		t.Error("BearerAuth() want error, got nil")
+	}
+}
+
+func TestDo_StatusOK_BasicAuth(t *testing.T) {
 	t.Parallel()
 	tc, mux, teardown := testClient(t)
 	t.Cleanup(teardown)
@@ -189,6 +245,28 @@ func TestDo_StatusOK(t *testing.T) {
 	username := "user"
 	password := "myPassword"
 	got, err := Get(tc.Url+endpoint).BasicAuth(username, password).Do()
+	if err != nil {
+		t.Errorf("Do() error = %v, wantErr nil", err)
+	}
+	if got.StatusCode != http.StatusOK {
+		t.Errorf("Do() HTTP Status Code = %v, wantErr %v", got.StatusCode, http.StatusOK)
+	}
+	if got.Body == nil {
+		t.Error("Do() want Response.Body, got  nil")
+	}
+}
+
+func TestDo_StatusOK_BearerAuth(t *testing.T) {
+	t.Parallel()
+	tc, mux, teardown := testClient(t)
+	t.Cleanup(teardown)
+	endpoint := "/api/v1/example/"
+	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, string(loadTestJson("testdata/simple.json")))
+	})
+	token := "someToken"
+	got, err := Get(tc.Url + endpoint).BearerAuth(token).Do()
 	if err != nil {
 		t.Errorf("Do() error = %v, wantErr nil", err)
 	}

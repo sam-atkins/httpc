@@ -12,15 +12,17 @@ import (
 )
 
 type HttpClient struct {
-	basicAuthRequired bool
-	basicAuthUsername string
-	basicAuthPassword string
-	body              io.Reader
-	Client            *http.Client
-	Error             error
-	headers           map[string]string
-	Method            string
-	Url               string
+	basicAuthRequired  bool
+	basicAuthUsername  string
+	basicAuthPassword  string
+	bearerAuthRequired bool
+	bearerAuthToken    string
+	body               io.Reader
+	Client             *http.Client
+	Error              error
+	headers            map[string]string
+	Method             string
+	Url                string
 }
 
 func NewClient(url string) *HttpClient {
@@ -150,9 +152,26 @@ func (h *HttpClient) BasicAuth(username, password string) *HttpClient {
 	if h.Error != nil {
 		return h
 	}
-	h.basicAuthRequired = true
 	h.basicAuthUsername = username
 	h.basicAuthPassword = password
+	if h.basicAuthPassword == "" || h.basicAuthUsername == "" {
+		h.Error = errors.New("Basic auth username or password are empty")
+		return h
+	}
+	h.basicAuthRequired = true
+	return h
+}
+
+func (h *HttpClient) BearerAuth(bearerToken string) *HttpClient {
+	if h.Error != nil {
+		return h
+	}
+	h.bearerAuthToken = bearerToken
+	if bearerToken == "" {
+		h.Error = errors.New("Bearer token cannot be empty")
+		return h
+	}
+	h.bearerAuthRequired = true
 	return h
 }
 
@@ -175,6 +194,10 @@ func (h *HttpClient) Do() (*http.Response, error) {
 
 	if h.basicAuthRequired {
 		req.SetBasicAuth(h.basicAuthUsername, h.basicAuthPassword)
+	}
+
+	if h.bearerAuthRequired {
+		req.Header.Add("Authorization", "Bearer "+h.bearerAuthToken)
 	}
 
 	res, resErr := h.Client.Do(req)
